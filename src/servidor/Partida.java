@@ -7,8 +7,19 @@ package servidor;
 
 /**
  *
- * @author Estudiante_2
+ * @author Grover
  */
 public class Partida {
+    
+    
+    private final boolean iniciado;
+    
+    public Partida(){
+        iniciado=false;
+    }
+    
+    public void addJugador(){
+        
+    }
     
 }
