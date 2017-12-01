@@ -16,11 +16,14 @@ public class Jugador {
     private int posY;
     private byte nro;
     private String nickname;
-    private Long idDate;
+    private boolean estado;
+    
     
     public Jugador(Client client){
         this.client=client;
         posX=posY=nro-1;
+        nickname="";
+        estado=false;
     }
 
     public void setClient(Client client) {
@@ -43,8 +46,8 @@ public class Jugador {
         this.nickname = nickname;
     }
 
-    public void setIdDate(Long idDate) {
-        this.idDate = idDate;
+    public void setEstado(boolean estado) {
+        this.estado = estado;
     }
 
     public Client getClient() {
@@ -67,8 +70,8 @@ public class Jugador {
         return nickname;
     }
 
-    public Long getIdDate() {
-        return idDate;
+    public boolean getEstado() {
+        return estado;
     }
     
 }
