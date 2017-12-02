@@ -5,13 +5,17 @@
  */
 package servidor;
 
+import eventos.ClientManagerEvent;
+import eventos.ClientManagerListener;
 import eventos.ServidorSocketEvent;
 import eventos.ServidorSocketListener;
+import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ListIterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,28 +48,57 @@ public class ServidorJuego {
                 String msj=cli.getMessage();
                 Jugador jugador=null;
                 System.out.println("__"+msj);
-                for(Jugador jug : jugadorList){
+                
+                ListIterator li = jugadorList.listIterator();
+                while (li.hasNext()) {
+                    Jugador jug = (Jugador) li.next();
+                    if (jug.getClient().equals(cli.getClient())){
+                        jugador=jug;
+                    }
+                    
+                        //break;
+                }
+                
+                /*for(Jugador jug : jugadorList){
                     if (jug.getClient().equals(cli.getClient()))
                         jugador=jug;
                         break;
-                }
+                }*/
                 if (msj.contains("[reg]")){
                     String nickname = msj.substring(5);
-                    //for(Jugador jugador : jugadorList){
-                        //if (jugador.getClient().equals(cli.getClient())){
-                            jugador.setNickname(nickname);
-                            confirmarRegistro(jugador);
-                        //}
-                        
-                    //}
+                    jugador.setNickname(nickname);
+                    jugador.setEstado(true);
+                    confirmarRegistro(jugador);
                 }
                 if (msj.contains("[map]")){
                     String nickname = msj.substring(5);
                     servidorSocket.EnviarMenasaje(jugador.getClient(), "[map]"+mapaControl.getMapaModeloString());
                 }
+                
+                if (msj.contains("[pos]")){
+                  
+                  mapaControl.addJugador(jugador);
+                  for(Jugador jug2 : jugadorList){
+                      if (jug2.getEstado()==true){
+                        servidorSocket.EnviarMenasaje(jugador.getClient(), "[pos]"+FormatoStringJugadorPos(jug2));     
+                        if (!jug2.equals(jugador))
+                            servidorSocket.EnviarMenasaje(jug2.getClient(), "[pos]"+FormatoStringJugadorPos(jugador));     
+                      }
+                  }
+                }
             }
         });
         servidorSocket.iniciarServicio();
+        
+    }
+    
+    private String FormatoStringJugadorPos(Jugador jug){
+        String numero, fil, col, posjug;
+        numero=String.valueOf(jug.getNro());
+        fil=String.valueOf(jug.getPosX());
+        col=String.valueOf(jug.getPosY());   
+        posjug="<"+numero+"_"+fil+"-"+col+">";
+        return posjug;
         
     }
     
@@ -103,10 +136,7 @@ public class ServidorJuego {
     }
     
     public void confirmarRegistro(Jugador jugador){
-        if (jugadorList.get(0)==jugador)
-            servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]done1");
-        else
-            servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]done");
+        servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]done>"+jugador.getNro());
     }
     
     public void addNewJugador(Client client){
@@ -114,6 +144,8 @@ public class ServidorJuego {
         // para reconectar a jugador
         // si no esta en la lista add como nuevo jugador
         Jugador jugador = new Jugador(client);
+        String numeroString =  String.valueOf(jugadorList.size()+11) ;
+        jugador.setNro(Byte.parseByte(numeroString));
         jugadorList.add(jugador);
     }
     

@@ -57,6 +57,10 @@ public class MapaControl {
         int fil, col;
         fil = col =0;
         for (byte letra : Arreglo){
+            if (letra==48) // 48 valor assci de cero
+                letra=0;
+            if (letra==49) // 49 valor assci de uno
+                letra=1;
             mapaModelo.setValue(letra, col, fil);
             col++;
             if (col>=100){
@@ -72,24 +76,28 @@ public class MapaControl {
         posY_Objetivo=posLibre.y;
     }
     
-    private Point getPosicionLibreRandom(){
+    public Point getPosicionLibreRandom(){
         Random rn = new Random();
         while (true){
-            int fil=rn.nextInt(100);
-            int col=rn.nextInt(100);
-            if (mapaModelo.getValue(col, fil)==0)
+            int fil=rn.nextInt(100+1);
+            int col=rn.nextInt(100+1);
+            int c1 = mapaModelo.getValue(col, fil);
+            if (c1==0)
                 return new Point(col,fil);
         }
     }
     
-    private void situarJugador(Jugador jugador, int distancia){
-        Point posLibre = getPosicionLibreRandom();
+    private void situarJugador(Jugador jugador){
+        Point punto = getPosicionLibreRandom();
+        jugador.setPosX(punto.x);
+        jugador.setPosY(punto.y);
+        
+        
         // if posLibre esta a tiene una lejania minima de "distancia" con la pos del objetivo
         // asignar los valores a jugador
         // de otro modo volver a pedir otra posLibre
         //tips:: no situar al jugador en la imaginario area de vision del objetivo
-        
-        
+     
     }
     
     /**
@@ -97,8 +105,8 @@ public class MapaControl {
      * @param jugador
      * @param distancia es la lejania minima entre el jugador y el objetivo
      */
-    public void addJugador(Jugador jugador, int distancia){
-        situarJugador(jugador, distancia);
+    public void addJugador(Jugador jugador){
+        situarJugador(jugador);
         mapaModelo.setValue(jugador.getNro(), jugador.getPosX(), jugador.getPosY());
     }
     

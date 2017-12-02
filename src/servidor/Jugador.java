@@ -21,7 +21,7 @@ public class Jugador {
     
     public Jugador(Client client){
         this.client=client;
-        posX=posY=nro-1;
+        posX=posY=nro=55;
         nickname="";
         estado=false;
     }
