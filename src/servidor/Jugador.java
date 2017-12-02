@@ -17,6 +17,7 @@ public class Jugador {
     private byte nro;
     private String nickname;
     private boolean estado;
+    private long dateConnection;
     
     
     public Jugador(Client client){
@@ -72,6 +73,14 @@ public class Jugador {
 
     public boolean getEstado() {
         return estado;
+    }
+   
+    public void setDateConnection(long dateConnection) {
+        this.dateConnection = dateConnection;
+    }
+
+    public long getDateConnection() {
+        return dateConnection;
     }
     
 }

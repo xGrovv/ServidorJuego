@@ -39,7 +39,9 @@ public class ServidorJuego {
             @Override
             public void onNewConnection(ServidorSocketEvent ev) {
                 ClientManager clientManager = (ClientManager)ev.getSource();
-                addNewJugador(clientManager.getClient());
+                Client client = clientManager.getClient();
+                //pedido de identificacion del cliente quet alves reconecta
+                servidorSocket.EnviarMenasaje(client, "[dateconnection_request]");
             }
 
             @Override
@@ -54,26 +56,51 @@ public class ServidorJuego {
                     Jugador jug = (Jugador) li.next();
                     if (jug.getClient().equals(cli.getClient())){
                         jugador=jug;
+                        break;
                     }
-                    
-                        //break;
+                }
+                if (jugador==null){
+                    if (msj.contains("[dateconnection]>")){
+                        String cadena = msj.substring(msj.indexOf('>')+1);
+                        Long dateCon = Long.parseLong(cadena);
+                        if (dateCon==0){// nuevo jugador
+                            addNewJugador(cli.getClient());
+                        }else{
+                            for(Jugador jug: jugadorList){
+                                if (dateCon==jug.getDateConnection()){
+                                    jug.setClient(cli.getClient());
+                                }
+                            }
+                        }
+                    }
+                    return;
                 }
                 
                 /*for(Jugador jug : jugadorList){
-                    if (jug.getClient().equals(cli.getClient()))
+                    if (jug.getClient().equals(cli.getClient())){
                         jugador=jug;
                         break;
+                    }
                 }*/
                 if (msj.contains("[reg]")){
                     String nickname = msj.substring(5);
+                    if (existeNickname(nickname)){
+                        servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg-no]"+jugador.getNro());
+                        return;
+                    }
                     jugador.setNickname(nickname);
                     jugador.setEstado(true);
-                    confirmarRegistro(jugador);
+                    servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]done>"+jugador.getNro());
                 }
                 if (msj.contains("[map]")){
                     String nickname = msj.substring(5);
                     servidorSocket.EnviarMenasaje(jugador.getClient(), "[map]"+mapaControl.getMapaModeloString());
                 }
+                if (msj.contains("[jugar]")){
+                    System.out.println("el juego inicio");
+                    
+                }
+                
                 
                 if (msj.contains("[pos]")){
                   
@@ -87,9 +114,19 @@ public class ServidorJuego {
                   }
                 }
             }
+
+            
         });
         servidorSocket.iniciarServicio();
         
+    }
+    
+    private boolean existeNickname(String nickname) {
+        for(Jugador jug: jugadorList){
+            if (jug.getNickname().equals(nickname))
+                return true;
+        }
+        return false;
     }
     
     private String FormatoStringJugadorPos(Jugador jug){
@@ -135,18 +172,18 @@ public class ServidorJuego {
         return mapaString;
     }
     
-    public void confirmarRegistro(Jugador jugador){
-        servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]done>"+jugador.getNro());
-    }
     
-    public void addNewJugador(Client client){
-        // compaarar el cliente por su idDate en la lista de jugadores
-        // para reconectar a jugador
-        // si no esta en la lista add como nuevo jugador
-        Jugador jugador = new Jugador(client);
+    
+    public void addNewJugador(Client client){    
+        Long dateCon= System.currentTimeMillis();
         String numeroString =  String.valueOf(jugadorList.size()+11) ;
+        Jugador jugador = new Jugador(client);
         jugador.setNro(Byte.parseByte(numeroString));
+        jugador.setDateConnection(dateCon);
         jugadorList.add(jugador);
+        
+        // entregamos su date connection al nuevo jugador
+        servidorSocket.EnviarMenasaje(jugador.getClient(), "[dateconnection]>"+dateCon.toString());
     }
     
     
