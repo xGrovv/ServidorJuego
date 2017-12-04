@@ -79,8 +79,8 @@ public class MapaControl {
     public Point getPosicionLibreRandom(){
         Random rn = new Random();
         while (true){
-            int fil=rn.nextInt(100+1);
-            int col=rn.nextInt(100+1);
+            int fil=rn.nextInt(20);
+            int col=rn.nextInt(20);
             int c1 = mapaModelo.getValue(col, fil);
             if (c1==0)
                 return new Point(col,fil);
@@ -112,6 +112,13 @@ public class MapaControl {
     
     public boolean posicionLibre (int posX, int posY){
         return mapaModelo.getValue(posX, posY)==ESPACIO_LIBRE;
+    }
+    
+    public void cambiarValores(int posX1, int posY1, int posX2, int posY2){
+        byte val1=mapaModelo.getValue(posX1, posY1);
+        byte val2=mapaModelo.getValue(posX2, posY2);
+        mapaModelo.setValue(val2, posX1, posY1);
+        mapaModelo.setValue(val1, posX2, posY2);
     }
     
 }
