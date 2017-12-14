@@ -12,6 +12,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.ListIterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,7 +30,6 @@ public class ServidorJuego {
     private int lider;
     private boolean enJuego;
     
-    
     public ServidorJuego(){
         lider=0;    // sin lider
         enJuego=false;
@@ -41,7 +41,7 @@ public class ServidorJuego {
             public void onNewConnection(ServidorSocketEvent ev) {
                 ClientManager clientManager = (ClientManager)ev.getSource();
                 Client client = clientManager.getClient();
-                //pedido de identificacion del cliente quet alves reconecta
+                //pedido de identificacion del cliente que talves reconecta
                 servidorSocket.EnviarMenasaje(client, "[dateconnection_request]");
             }
 
@@ -50,10 +50,46 @@ public class ServidorJuego {
                 onMessageReceive_Action(ev);
             }
 
-            
+            @Override
+            public void onLostConnection(ServidorSocketEvent ev) {
+                ClientManager clientManager = (ClientManager)ev.getSource();
+                Client client = clientManager.getClient();
+                for (Jugador jug : jugadorList) {
+                    if (jug.getClient()==client){
+                        jug.setEstado(false);
+                        pausarJugador(jug);
+                        break;
+                    }
+                }
+            }
+
         });
         servidorSocket.iniciarServicio();
-        
+    }
+    
+    // asigna como lider al primero del lista que tenga estado true
+    public void asignarLider(){
+        for(Jugador jug : jugadorList){
+            if (jug.getEstado()==true){
+                lider=jug.getNro();
+                servidorSocket.EnviarMenasaje(jug.getClient(), "[lider]");
+                break;
+            }
+        }
+    }
+    
+    public void pausarJugador(Jugador jugador){
+        if (jugador.getNro()==lider){
+            asignarLider();
+            // ahora faltaria como se entera el exlider que ya no lo es
+            //soluciones:  1. cuando reconecte enviarle mensaje que ya no es lider (pero)
+            //                  cuando alguien reconecta ya no sabremos si se trata de exlider)
+            //                  el mensaje iria para todos los reconectados,
+            //              2.el cliente sabe que si perdio la conexion tambien perdio el liderazgo
+            //              3. reasignar lider solo cuando termine la partida
+        }
+        String cadena="[jugador.pausado]>"+jugador.getNro()+"_"+jugador.getPosX()+"-"+jugador.getPosY();
+        enviarMensajeTodosEstadoTrue(cadena);
     }
     
     private void onMessageReceive_Action(ServidorSocketEvent ev){
@@ -70,6 +106,8 @@ public class ServidorJuego {
                 break;
             }
         }
+        
+        // si no se encuentra en la lista el cliente
         if (jugador==null){
             if (msj.contains("[dateconnection]>")){
                 String cadena = msj.substring(msj.indexOf('>')+1);
@@ -80,19 +118,20 @@ public class ServidorJuego {
                     for(Jugador jug: jugadorList){
                         if (dateCon==jug.getDateConnection()){
                             jug.setClient(cli.getClient());
+                            jug.setEstado(true);
+                            String texto = "[reconectado]>"+jug.getNro()+"_"+jug.getPosX()+"-"+jug.getPosY();
+                            enviarMensajeTodosEstadoTrue(texto);
+                            
+                            break;
                         }
                     }
+                    //si tiene un data connection y aun asi no esta en la lista
+                    addNewJugador(cli.getClient());
                 }
             }
             return;
         }
-
-        /*for(Jugador jug : jugadorList){
-            if (jug.getClient().equals(cli.getClient())){
-                jugador=jug;
-                break;
-            }
-        }*/
+        
         if (msj.contains("[reg]")){
             if (enJuego==true){
                 servidorSocket.EnviarMenasaje(jugador.getClient(), "[reg]enjuego");
@@ -111,11 +150,12 @@ public class ServidorJuego {
                 lider= jugador.getNro();
                 servidorSocket.EnviarMenasaje(jugador.getClient(), "[lider]");
             }
+            return;
         }
         
         if (msj.contains("[map]")){
-            String nickname = msj.substring(5);
             servidorSocket.EnviarMenasaje(jugador.getClient(), "[map]"+mapaControl.getMapaModeloString());
+            return;
         }
         
         if (msj.contains("[move]>")){ // supone pos1 bicho y pos2 lugar
@@ -126,30 +166,36 @@ public class ServidorJuego {
             if (!mapaControl.posicionLibre(Integer.parseInt(posX2), Integer.parseInt(posY2)))
                 return;
             mapaControl.cambiarValores(Integer.parseInt(posX1),Integer.parseInt(posY1),Integer.parseInt(posX2),Integer.parseInt(posY2));
-            for(Jugador jug: jugadorList){
-                servidorSocket.EnviarMenasaje(jug.getClient(), msj);
-            }
+            jugador.setPosX(Integer.parseInt(posX2));
+            jugador.setPosY(Integer.parseInt(posY2));
+            enviarMensajeTodosEstadoTrue(msj);
+            return;
         }
         
         if (msj.contains("[salir]")){
-            if (jugador.getNro()==lider)
+            if (jugador.getNro()==lider){
                 lider=0;
+                //falta aqui darle lider a otro jugador
+            }
+            String cadena="[jugador.quitado]>"+jugador.getNro()+"_"+jugador.getPosX()+"-"+jugador.getPosY();
+            enviarMensajeTodosEstadoTrue(cadena);
+            mapaControl.cambiarValor((byte)0, jugador.getPosX(), jugador.getPosY());
             jugadorList.remove(jugador);
-            System.out.println("un jugador se retiró");
+            System.out.println("un jugador se retiró: "+ jugadorList.size());
+            return;
         }
+        
+        
         
         if (msj.contains("[jugar]")){
             if (jugadorList.size()>0){ // mas de un jugador
-                for(Jugador jug: jugadorList){
-                    servidorSocket.EnviarMenasaje(jug.getClient(), "[jugar-done]");
-                }
+                enviarMensajeTodosEstadoTrue("[jugar-done]");
                 enJuego=true;
             }
+            return;
         }
-
-
+        
         if (msj.contains("[pos]")){
-
           mapaControl.addJugador(jugador);
           for(Jugador jug2 : jugadorList){
               if (jug2.getEstado()==true){
@@ -159,6 +205,18 @@ public class ServidorJuego {
               }
           }
         }
+    }
+    
+    private void enviarMensajeTodosEstadoTrue(String msj){
+        try{
+            for(Jugador jug: jugadorList){
+            if (jug.getEstado())
+                servidorSocket.EnviarMenasaje(jug.getClient(), msj);
+            }
+        }catch (ConcurrentModificationException e){
+            System.out.println("servidor.ServidorJuego.enviarMensajeTodosEstadoTrue()");
+        }
+        
     }
     
     private boolean existeNickname(String nickname) {
@@ -176,32 +234,24 @@ public class ServidorJuego {
         col=String.valueOf(jug.getPosY());   
         posjug="<"+numero+"_"+fil+"-"+col+">";
         return posjug;
-        
     }
     
     private String CargarMapatxt(){
-        //String dir=getClass().getResource("/Recursos/mapa1.txt").getPath();
         String linea;
         FileReader fileR;
         String mapaString="";
         try {
             fileR = new FileReader(getClass().getResource("/Recursos/mapa1.txt").getPath());
             BufferedReader br = new BufferedReader(fileR);
-            int fila=0;
             while((linea = br.readLine())!=null) {
-                int columna=0;
                 // letra c es camino, letra p es pared. convertiremos estos a 0 caminio y 1 pared
                 for (byte letra : linea.getBytes()){
                     if (letra=='c')
                         letra=0;
                     else
                         letra=1;
-                    
                     mapaString=mapaString+letra;
-                    columna++;
                 }
-                for (int i=0; i<=linea.length();i++)
-                fila++;
             }   
             br.close();
         } catch (FileNotFoundException ex) {
@@ -211,8 +261,6 @@ public class ServidorJuego {
         }
         return mapaString;
     }
-    
-    
     
     public void addNewJugador(Client client){    
         Long dateCon= System.currentTimeMillis();

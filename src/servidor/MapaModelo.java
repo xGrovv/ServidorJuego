@@ -6,8 +6,6 @@
 package servidor;
 
 import java.awt.Point;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
@@ -37,8 +35,6 @@ public class MapaModelo {
         return matriz[punto.x][punto.y];
         
     }
-    
-    
     
     
 }

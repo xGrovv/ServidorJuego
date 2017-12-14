@@ -6,15 +6,7 @@
 package servidor;
 
 import java.awt.Point;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -100,11 +92,6 @@ public class MapaControl {
      
     }
     
-    /**
-     *
-     * @param jugador
-     * @param distancia es la lejania minima entre el jugador y el objetivo
-     */
     public void addJugador(Jugador jugador){
         situarJugador(jugador);
         mapaModelo.setValue(jugador.getNro(), jugador.getPosX(), jugador.getPosY());
@@ -119,6 +106,10 @@ public class MapaControl {
         byte val2=mapaModelo.getValue(posX2, posY2);
         mapaModelo.setValue(val2, posX1, posY1);
         mapaModelo.setValue(val1, posX2, posY2);
+    }
+    
+    public void cambiarValor(byte val, int posX1, int posY1){
+        mapaModelo.setValue(val, posX1, posY1);
     }
     
 }
